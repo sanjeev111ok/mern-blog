@@ -1,6 +1,7 @@
 import { Button, TextInput } from "flowbite-react"
 import { useEffect, useRef, useState } from "react"
 import { useSelector } from "react-redux"
+import axios from "axios"
 export default function DashProfile() {
   const { currentUser } = useSelector((state) => state.user)
   const [imageFile, setImageFile] = useState(null)
@@ -13,13 +14,26 @@ export default function DashProfile() {
       setImageFileUrl(URL.createObjectURL(file))
     }
   }
-  useEffect(()=>{
-    if(imageFile){
+  useEffect(() => {
+    if (imageFile) {
       uploadImage()
     }
-  },[imageFile])
-  const uploadImage= async()=>{
-     console.log('uploading image...')
+  }, [imageFile])
+  console.log([imageFile])
+  const uploadImage = async () => {
+    const formData = new FormData()
+    formData.append("file", imageFile)
+    formData.append("upload_preset", "mern-blog")
+    formData.append("folder", "mern")
+    try {
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/dziazpcgd/image/upload`,
+        formData
+      )
+      console.log("image uploaded", response.data)
+    } catch (error) {
+      console.log("Error uploading image", error)
+    }
   }
   return (
     <div className="max-w-lg mx-auto p-3 w-full">
