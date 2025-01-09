@@ -1,11 +1,15 @@
 import { Button, TextInput } from "flowbite-react"
 import { useEffect, useRef, useState } from "react"
 import { useSelector } from "react-redux"
+import { CircularProgressbar } from "react-circular-progressbar"
+import "react-circular-progressbar/dist/styles.css"
+
 import axios from "axios"
 export default function DashProfile() {
   const { currentUser } = useSelector((state) => state.user)
   const [imageFile, setImageFile] = useState(null)
   const [imageFileUrl, setImageFileUrl] = useState(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const filePickerRef = useRef()
   const handleImageChange = (e) => {
     const file = e.target.files[0]
@@ -28,7 +32,14 @@ export default function DashProfile() {
     try {
       const response = await axios.post(
         `https://api.cloudinary.com/v1_1/dziazpcgd/image/upload`,
-        formData
+        formData,
+        {
+          onUploadProgress: (progressEvent) => {
+            const { loaded, total } = progressEvent
+            const percent = Math.floor((loaded * 100) / total)
+            setUploadProgress(percent)
+          },
+        }
       )
       console.log("image uploaded", response.data)
     } catch (error) {
@@ -47,13 +58,23 @@ export default function DashProfile() {
           hidden
         />
         <div
-          className="w-32 h-32 self-center cursor-pointer shadow-md rounded-full overflow-hidden"
+          className="relative w-32 h-32 self-center cursor-pointer shadow-md rounded-full overflow-hidden  "
           onClick={() => filePickerRef.current.click()}
         >
+          {uploadProgress > 0 && (
+            <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center">
+              <CircularProgressbar
+                value={uploadProgress}
+                text={`${uploadProgress}%`}
+              />
+            </div>
+          )}
           <img
             src={imageFileUrl || currentUser.profilePicture}
             alt="user"
-            className="rounded-full w-full h-full object-cover border-8 border-[lightgray]"
+            className={`rounded-full w-full h-full object-cover border-8 border-[lightgray]${
+              uploadProgress && uploadProgress < 100 && "filter blur-sm"
+            }`}
           />
         </div>{" "}
         <TextInput
@@ -73,6 +94,7 @@ export default function DashProfile() {
           Update
         </Button>
       </form>
+
       <div className="text-red-500 flex justify-between mt-6">
         <span className="cursor-pointer">Delete Account</span>
         <span className="cursor-pointer ">Sign Out</span>
