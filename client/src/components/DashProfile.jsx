@@ -1,23 +1,30 @@
-import { Button, TextInput } from "flowbite-react"
+import { Alert, Button, Modal, TextInput } from "flowbite-react"
 import { useEffect, useRef, useState } from "react"
 import { useSelector } from "react-redux"
 import { CircularProgressbar } from "react-circular-progressbar"
 import "react-circular-progressbar/dist/styles.css"
 import axios from "axios"
-
+import { HiOutlineExclamationCircle } from "react-icons/hi"
 import {
   updateStart,
   updateSuccess,
   updateFailure,
-} from "../redux/user/userSlice"
+  deleteUserStart,
+  deleteUserSuccess,
+  deleteUserFailure,
+  signoutSuccess,
+} from "../redux/user/userSlice.js"
 import { useDispatch } from "react-redux"
 
 export default function DashProfile() {
-  const { currentUser } = useSelector((state) => state.user)
+  const { currentUser, loading, error } = useSelector((state) => state.user)
   console.log(currentUser)
   const [imageFile, setImageFile] = useState(null)
   const [imageFileUrl, setImageFileUrl] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [showModel, setShowModel] = useState(false)
+  const [updateUserSuccess, setUpdateUserSuccess] = useState(null)
+  const [updateUserError, setUpdateUserError] = useState(null)
   const [formData, setFormData] = useState({
     username: currentUser.username,
     email: currentUser.email,
@@ -83,7 +90,7 @@ export default function DashProfile() {
     }
     try {
       dispatch(updateStart())
-   
+
       const res = await fetch(`/api/user/update/${currentUser._id}`, {
         method: "PUT",
         headers: {
@@ -92,17 +99,55 @@ export default function DashProfile() {
         },
         body: JSON.stringify(formData),
       })
-     
-      const data =await res.json()
-      
+
+      const data = await res.json()
       if (!res.ok) {
         dispatch(updateFailure(data.message))
+        setUpdateUserError(data.message)
       } else {
         dispatch(updateSuccess(data))
+        setUpdateUserSuccess("User's profile updated successfully")
       }
     } catch (error) {
-    
       dispatch(updateFailure(error.message))
+      setUpdateUserError(error.message)
+    }
+  }
+  const handleDeleteUser = async () => {
+    setShowModel(false)
+    try {
+      dispatch(deleteUserStart())
+      const res = await fetch(`/api/user/delete/${currentUser._id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          authorization: localStorage.getItem("token"),
+        },
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        dispatch(deleteUserFailure(data.message))
+      } else {
+        dispatch(deleteUserSuccess(data))
+      }
+    } catch (error) {
+      dispatch(deleteUserFailure(error.message))
+    }
+  }
+  const handleSignout = async () => {
+    try {
+      const res = await fetch("/api/user/signout", {
+        method: "POST",
+        authorization: localStorage.removeItem("token"),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        console.log(data.message)
+      } else {
+        dispatch(signoutSuccess())
+      }
+    } catch (error) {
+      console.log(error.message)
     }
   }
   return (
@@ -156,15 +201,64 @@ export default function DashProfile() {
           placeholder="Password"
           onChange={handleChange}
         />
-        <Button type="submit" gradientDuoTone="purpleToBlue" outline>
-          Update
+        <Button
+          type="submit"
+          gradientDuoTone="purpleToBlue"
+          outline
+          disabled={loading}
+        >
+          {loading ? "Loading..." : "Update"}
         </Button>
       </form>
 
       <div className="text-red-500 flex justify-between mt-6">
-        <span className="cursor-pointer" >Delete Account</span>
-        <span className="cursor-pointer">Sign Out</span>
+        <span onClick={() => setShowModel(true)} className="cursor-pointer">
+          Delete Account
+        </span>
+        <span onClick={handleSignout} className="cursor-pointer">
+          Sign Out
+        </span>
       </div>
+      {updateUserSuccess && (
+        <Alert color="success" className="mt-5">
+          {updateUserSuccess}
+        </Alert>
+      )}
+      {updateUserError && (
+        <Alert color="failure" className="mt-5">
+          {updateUserError}
+        </Alert>
+      )}
+      {error && (
+        <Alert color="failure" className="mt-5">
+          {error}
+        </Alert>
+      )}
+
+      <Modal
+        show={showModel}
+        onClose={() => setShowModel(false)}
+        popup
+        size="md"
+      >
+        <Modal.Header />
+        <Modal.Body>
+          <div className="text-center">
+            <HiOutlineExclamationCircle className="h-14 w-14 text-gray-400 dark:text-gray-200 mb-4 mx-auto" />
+            <h3 className="mb-5 text-gray-500 dark:text-gray-400">
+              Are you sure you want to delete your account?
+            </h3>
+            <div className="flex justify-center gap-7">
+              <Button color="failure" onClick={handleDeleteUser}>
+                Yes,I am Sure
+              </Button>
+              <Button color="gray" onClick={() => setShowModel(false)}>
+                No
+              </Button>
+            </div>
+          </div>
+        </Modal.Body>
+      </Modal>
     </div>
   )
 }
