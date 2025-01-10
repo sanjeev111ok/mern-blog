@@ -25,8 +25,10 @@ export default function OAuth() {
         }),
       })
       const data = await res.json()
+
       if (res.ok) {
-        dispatch(signInSuccess(data))
+        localStorage.setItem("token", data.token)
+        dispatch(signInSuccess(data.rest))
         navigate("/")
       }
     } catch (error) {
