@@ -20,7 +20,7 @@ app.use(express.json())
 app.use(cookieParser())
 
 app.listen(5005, () => {
-  console.log("Server is running in port 3000!!")
+  console.log("Server is running in port 5005!!")
 })
 app.use("/api/user", userRoutes)
 app.use("/api/auth", authRoutes)

@@ -1,4 +1,5 @@
 import { Alert, Button, Modal, TextInput } from "flowbite-react"
+import { Link } from "react-router-dom"
 import { useEffect, useRef, useState } from "react"
 import { useSelector } from "react-redux"
 import { CircularProgressbar } from "react-circular-progressbar"
@@ -18,7 +19,7 @@ import { useDispatch } from "react-redux"
 
 export default function DashProfile() {
   const { currentUser, loading, error } = useSelector((state) => state.user)
-  console.log(currentUser)
+
   const [imageFile, setImageFile] = useState(null)
   const [imageFileUrl, setImageFileUrl] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -209,6 +210,17 @@ export default function DashProfile() {
         >
           {loading ? "Loading..." : "Update"}
         </Button>
+        {currentUser.isAdmin && (
+          <Link to={"/create-post"}>
+            <Button
+              type="button"
+              gradientDuoTone="purpleToPink"
+              className="w-full"
+            >
+              Create a post
+            </Button>
+          </Link>
+        )}
       </form>
 
       <div className="text-red-500 flex justify-between mt-6">
