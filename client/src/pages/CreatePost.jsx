@@ -3,13 +3,19 @@ import axios from "axios"
 import { useState } from "react"
 import ReactQuill from "react-quill"
 import "react-quill/dist/quill.snow.css"
+import { useNavigate } from "react-router-dom"
 
 export default function CreatePost() {
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
   const [imageUrl, setImageUrl] = useState("")
+  const [formData, setFormData] = useState({})
+  const [publishError, setPublishError] = useState(null)
+  const [publishSuccess, setPublishSuccess] = useState(false)
   const [imageUploadError, setImageUploadError] = useState(null)
   const [imageUploadSuccess, setImageUploadSuccess] = useState(false)
+  const [category, setCategory] = useState("")
+  const navigate = useNavigate()
 
   const handleUploadImage = async () => {
     try {
@@ -17,49 +23,110 @@ export default function CreatePost() {
         setImageUploadError("Please select an image first.")
         return
       }
-      setLoading(true) // Set loading to true when uploading starts
-      setImageUploadError(null) // Reset previous error
+      setLoading(true)
+      setImageUploadError(null)
 
-      // Create a FormData object to hold the file and send it to Cloudinary
-      const formData = new FormData()
-      formData.append("file", file) // 'file' is the selected image
-      formData.append("upload_preset", "mern-blog") // Your Cloudinary upload preset
-      formData.append("folder", "mern") // Optional: specify the folder in Cloudinary
+      const uploadData = new FormData()
+      uploadData.append("file", file)
+      uploadData.append("upload_preset", "mern-blog")
+      uploadData.append("folder", "mern")
 
-      // Send a POST request to Cloudinary's API for image upload
       const response = await axios.post(
-        `https://api.cloudinary.com/v1_1/dziazpcgd/image/upload`, // Replace with your cloud name
-        formData
+        `https://api.cloudinary.com/v1_1/dziazpcgd/image/upload`,
+        uploadData
       )
 
-      // Get the image URL from the response and set it in the state
-      setImageUrl(response.data.secure_url) // Save the uploaded image URL
-      setImageUploadSuccess(true) // Set upload success state
-      setLoading(false) // Set loading to false after the upload finishes
+      setImageUrl(response.data.secure_url)
+      setFormData((prevData) => ({
+        ...prevData,
+        imageUrl: response.data.secure_url,
+      }))
+      setImageUploadSuccess(true)
+      setLoading(false)
     } catch (error) {
-      setImageUploadError("Error uploading image. Please try again.") // Set error message
-      setImageUploadSuccess(false) // Reset success state
-      setLoading(false) // Set loading to false if an error occurs
+      const errorMessage =
+        error?.response?.data?.message ||
+        error.message ||
+        "Error uploading image. Please try again."
+      setImageUploadError(errorMessage)
+      setImageUploadSuccess(false)
+      setLoading(false)
+    }
+  }
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }))
+  }
+
+  const handleCategoryChange = (e) => {
+    const selectedCategory = e.target.value
+    setCategory(selectedCategory)
+    setFormData((prevData) => ({
+      ...prevData,
+      category: selectedCategory,
+    }))
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const res = await fetch("/api/post/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: localStorage.getItem("token"),
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setPublishSuccess(true)
+        navigate(`/post/${data.slug}`)
+      } else {
+        setPublishError(
+          data.message || "Error creating post. Please try again."
+        )
+      }
+    } catch (error) {
+      setPublishError(
+        error?.message || "Error creating post. Please try again."
+      )
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="p-3 max-w-3xl mx-auto min-h-screen ">
+    <div className="p-3 max-w-3xl mx-auto min-h-screen">
       <h1 className="text-center text-3xl my-7 font-semibold">Create a post</h1>
-      <form className="flex flex-col gap-4">
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         <div className="flex flex-col gap-4 sm:flex-row">
           <TextInput
             type="text"
             placeholder="Title"
             required
             id="title"
+            name="title"
             className="flex-1"
+            onChange={handleInputChange}
           />
-          <Select>
+          <Select
+            name="category"
+            value={category}
+            onChange={handleCategoryChange}
+          >
             <option value="uncategorized">Select a Category</option>
             <option value="javascript">JavaScript</option>
             <option value="reactjs">React.Js</option>
-            <option value="nodejs"> Node.Js</option>
+            <option value="nodejs">Node.Js</option>
             <option value="nextjs">Next.Js</option>
           </Select>
         </div>
@@ -75,21 +142,18 @@ export default function CreatePost() {
             size="sm"
             outline
             onClick={handleUploadImage}
-            disabled={loading} // Disable button while uploading
+            disabled={loading}
           >
             {loading ? "Uploading..." : "Upload Image"}
           </Button>
         </div>
 
-        {/* Display error message */}
         {imageUploadError && <Alert color="failure">{imageUploadError}</Alert>}
 
-        {/* Display success message */}
         {imageUploadSuccess && !imageUploadError && (
           <Alert color="success">Image uploaded successfully!</Alert>
         )}
 
-        {/* Display uploaded image */}
         {imageUrl && (
           <div className="mt-4">
             <h2 className="font-semibold">Uploaded Image:</h2>
@@ -102,9 +166,19 @@ export default function CreatePost() {
           placeholder="Write something..."
           className="h-72 mb-12"
           required
+          onChange={(value) =>
+            setFormData((prevData) => ({
+              ...prevData,
+              content: value,
+            }))
+          }
         />
-        <Button type="submit" gradientDuoTone="purpleToPink">
-          Publish
+        {publishError && <Alert color="failure">{publishError}</Alert>}
+        {publishSuccess && !publishError && (
+          <Alert color="success">Post published successfully!</Alert>
+        )}
+        <Button type="submit" gradientDuoTone="purpleToPink" disabled={loading}>
+          {loading ? "Submitting..." : "Publish"}
         </Button>
       </form>
     </div>

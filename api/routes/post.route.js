@@ -5,4 +5,5 @@ import { create } from "../controllers/post.controller.js"
 const router = express.Router()
 
 router.post("/create", verfiyToken, create)
+console.log(verfiyToken)
 export default router
