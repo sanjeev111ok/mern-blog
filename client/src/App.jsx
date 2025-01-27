@@ -13,6 +13,7 @@ import CreatePost from "./pages/CreatePost.jsx"
 import UpdatePost from "./pages/UpdatePost.jsx"
 import PostPage from "./pages/PostPage.jsx"
 import ScrollToTop from "./components/ScrollToTop.jsx"
+import Search from "./pages/Search.jsx"
 export default function App() {
   return (
     <BrowserRouter>
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/about" element={<About />}></Route>
         <Route path="/sign-up" element={<SignUp />}></Route>
         <Route path="/sign-in" element={<SignIn />}></Route>
+        <Route path="/search" element={<Search />}></Route>
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />}></Route>
         </Route>
